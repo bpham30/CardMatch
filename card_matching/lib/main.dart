@@ -20,18 +20,18 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.pink,
         ),
         body: const Padding( padding:  EdgeInsets.all(16),
-          child:GameCard( isFlipped: false, icon: 'https://pngimg.com/uploads/pumpkin/pumpkin_PNG86730.png',),
+          child:GameCard( icon: Icons.star),
         ),
       ),
     );
   }
 }
 
+//create card widget
 class GameCard extends StatefulWidget {
-  
-  final bool isFlipped;
-  final String icon;
-  const GameCard({super.key, required this.isFlipped, required this.icon});
+  //store icon to show
+  final IconData icon;
+  const GameCard({super.key, required this.icon});
 
 
   @override
@@ -39,11 +39,21 @@ class GameCard extends StatefulWidget {
 }
 
 class _GameCardState extends State<GameCard> {
-  
+  //track flip status
+  bool isFlipped = false;
+
+  //function to flip card state
+  void _flip(){
+    setState(() {
+      isFlipped = !isFlipped;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: _flip,
+      child: Container(
       height: 200,
       width: 200,
       decoration: BoxDecoration(
@@ -60,20 +70,22 @@ class _GameCardState extends State<GameCard> {
         ],
       ),
       child: Center(
-        child: widget.isFlipped
+        //show flipped image
+        child: isFlipped
             ? const Icon(
-                Icons.star, // Placeholder icon for the card back
+                Icons.star, 
                 size: 50,
-                color: Colors.pink,
-              ) // Display the image when flipped
+                color: Colors.yellow,
+              ) 
             : const Icon(
-                Icons.question_mark, // Placeholder icon for the card back
+                Icons.question_mark, 
                 size: 50,
                 color: Colors.pink,
               ), 
       ),
       //add button to flip the card
       
+    )
     );
   }
     
