@@ -10,26 +10,94 @@ void main() {
 }
 //create card data model
 class CardData {
-  //store icon to show
+  //store icon data
   final IconData icon;
   //store flip status
   bool isFlipped = false;
+  //store match status
+  bool isMatching = false;
 
-  CardData({required this.icon, this.isFlipped = false});
+  CardData({required this.icon, this.isFlipped = false, this.isMatching = false});
 }
 //create card provider to manage card grid state
 class CardProvider extends ChangeNotifier {
-  
-  //4x4 card grid
-  final List<CardData> _cards = List.generate(16, (index) => CardData(icon: Icons.star, isFlipped: false));
+  //icon list
+  final List <IconData> icons = [
+    Icons.star,
+    Icons.favorite,
+    Icons.home,
+    Icons.cake,
+    Icons.pets,
+    Icons.face,
+    Icons.music_note,
+    Icons.sports,
+  ];
 
   //get card data
-  List<CardData> get cards => _cards;
+  late List<CardData> _cards;
 
-  //flip card at index
+  CardProvider(){
+    //create pairs of cards in data
+    _cards = _generateCards();
+    //randomize
+    _cards.shuffle();
+  }
+
+  //generate card pairs
+  List<CardData> _generateCards() {
+    List <CardData> cards = [];
+    //create pairs
+    for (var icon in icons) {
+      cards.add(CardData(icon: icon));
+      cards.add(CardData(icon: icon));
+    }
+    return cards;
+  }
+
+  //get cards
+  List<CardData> get cards => _cards;
+  //store flipped cards
+  List<int> _flippedCards = [];
+
+  //flip card 
   void flipCard(int index) {
+    //if 2 are flipped, check if they match
+    if (_flippedCards.length == 2 || _cards[index].isMatching) {
+      return;
+    }
     //flip card
     _cards[index].isFlipped = !_cards[index].isFlipped;
+    //update ui
+    notifyListeners();
+    //add flipped card to list
+    _flippedCards.add(index);
+    //if 2 cards are flipped check for match
+    if (_flippedCards.length == 2) {
+      Future.delayed(const Duration(seconds: 1), () {
+        checkForMatch();
+      });
+    }
+    
+    
+  }
+
+  //check for match
+  void checkForMatch() {
+    int first = _flippedCards[0];
+    int second = _flippedCards[1];
+    //check for match
+    if (_cards[first].icon == _cards[second].icon) {
+      //match
+      _cards[first].isMatching = true;
+      _cards[second].isMatching = true;
+    } else {
+      //if no match flip back
+      _cards[first].isFlipped = false;
+      _cards[second].isFlipped = false;
+    }
+
+    //reset
+    _flippedCards = [];
     //update ui
     notifyListeners();
   }
@@ -105,7 +173,7 @@ class GameCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
         //flip on tap
-        onTap: onFlip,
+        onTap: !cardData.isMatching && !cardData.isFlipped ? onFlip : null,
         //add flip animation with AnimatedBuilder
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
