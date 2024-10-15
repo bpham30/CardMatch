@@ -60,7 +60,7 @@ class CardProvider extends ChangeNotifier {
   List<int> _flippedCards = [];
 
   //flip card 
-  void flipCard(int index) {
+  void flipCard(int index, BuildContext context) {
     //if 2 are flipped, check if they match
     if (_flippedCards.length == 2 || _cards[index].isMatching) {
       return;
@@ -75,6 +75,10 @@ class CardProvider extends ChangeNotifier {
     if (_flippedCards.length == 2) {
       Future.delayed(const Duration(seconds: 1), () {
         checkForMatch();
+        //check for win
+        if (_gameOver()) {
+          _showWin(context);
+        }
       });
     }
     
@@ -100,6 +104,41 @@ class CardProvider extends ChangeNotifier {
     _flippedCards = [];
     //update ui
     notifyListeners();
+  }
+
+  //check win condition
+  bool _gameOver() {
+    return _cards.every((card) => card.isMatching);
+  }
+
+  //reset game
+  void _resetGame() {
+    //clear values
+    _cards = _generateCards();
+    _cards.shuffle();
+    _flippedCards = [];
+    notifyListeners(); //upate ui
+  }
+
+  //display win message
+  void _showWin(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('You Win!'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _resetGame();
+              },
+              child: const Text('Play Again'),
+            ),
+          ],
+        );
+      },
+    );
   }
   
 }
@@ -153,7 +192,7 @@ class CardGrid  extends StatelessWidget {
       itemBuilder: (context, index) {
         return GameCard(cardData: provider.cards[index], onFlip: () {
           //flip card on tap
-          provider.flipCard(index);
+          provider.flipCard(index, context);
         });
       },
     );
