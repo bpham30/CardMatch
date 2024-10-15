@@ -1,9 +1,39 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  //run app with provider to provide card data
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(create: (_) => CardProvider()),
+  ], child: const MyApp()));
+}
+//create card data model
+class CardData {
+  //store icon to show
+  final IconData icon;
+  //store flip status
+  bool isFlipped = false;
+
+  CardData({required this.icon, this.isFlipped = false});
+}
+//create card provider to manage card grid state
+class CardProvider extends ChangeNotifier {
+  
+  //4x4 card grid
+  final List<CardData> _cards = List.generate(16, (index) => CardData(icon: Icons.star, isFlipped: false));
+
+  //get card data
+  List<CardData> get cards => _cards;
+
+  //flip card at index
+  void flipCard(int index) {
+    //flip card
+    _cards[index].isFlipped = !_cards[index].isFlipped;
+    //update ui
+    notifyListeners();
+  }
+  
 }
 
 class MyApp extends StatelessWidget {
@@ -28,7 +58,7 @@ class MyApp extends StatelessWidget {
         body: const Padding(
           padding: EdgeInsets.all(16),
           child: Center(
-            child: GameCard(icon: Icons.star),
+            child: CardGrid(),
           ),
         ),
       ),
@@ -36,123 +66,122 @@ class MyApp extends StatelessWidget {
   }
 }
 
-//create card widget
-class GameCard extends StatefulWidget {
-  //store icon to show
-  final IconData icon;
-  const GameCard({super.key, required this.icon});
+//create card grid widget
+class CardGrid  extends StatelessWidget {
+  const CardGrid({super.key});
 
   @override
-  _GameCardState createState() => _GameCardState();
+  Widget build(BuildContext context) {
+    //get card provider
+    final provider = Provider.of<CardProvider>(context);
+    //create card grid
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: provider.cards.length,
+      itemBuilder: (context, index) {
+        return GameCard(cardData: provider.cards[index], onFlip: () {
+          //flip card on tap
+          provider.flipCard(index);
+        });
+      },
+    );
+  }
 }
 
-class _GameCardState extends State<GameCard> {
-  //track flip status
-  bool isFlipped = false;
+//create card widget
+class GameCard extends StatelessWidget {
+  final CardData cardData;
+  //callback to flip card
+  final VoidCallback onFlip;
 
-  //function to flip card state
-  void _flip() {
-    setState(() {
-      isFlipped = !isFlipped;
-    });
-  }
+  const GameCard({super.key, required this.cardData, required this.onFlip});
 
+  //animation
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
         //flip on tap
-        onTap: _flip,
+        onTap: onFlip,
         //add flip animation with AnimatedBuilder
-        child: AnimatedSwitcher(
+        child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            //create rotate animation
-           final rotateAnim = Tween(begin: 0.0, end: 1.0).animate(animation);
-            
-            return AnimatedBuilder(
-              animation: rotateAnim,
-              child: child, 
-              builder: (context, child) {
-              
-              //rotate card based on flip
-              if (isFlipped) {
-                return Transform(
-                  transform: Matrix4.rotationY(pi * rotateAnim.value),
-                  alignment: Alignment.center,
-                  child: child,
-                );
-              } else {
-                return Transform(
-                  transform: Matrix4.rotationY(pi * rotateAnim.value + pi),
-                  alignment: Alignment.center,
-                  child: child,
-                );
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.001)
+            ..rotateY(cardData.isFlipped ? pi : 0),
 
-              }
-              },
-            );
-            //show card based on flip
-          },
-          child: isFlipped
-          //
-      ? Container(
-          //key to differentiate between widgets
-          key: const ValueKey(true),
-          height: 100,
-          width: 75,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: Colors.black.withOpacity(.05),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.yellow.withOpacity(0.2),
-                spreadRadius: 0,
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.star,
-              size: 50,
-              color: Colors.yellow,
-            ),
-          ),
+            //flip in place
+            transformAlignment: Alignment.center,
+          child: cardData.isFlipped ? _buildCardFront() : _buildCardBack(),
         )
-      : Container(
-          //key to differentiate between widgets
-          key: const ValueKey(false),
-          height: 100,
-          width: 75,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: Colors.black.withOpacity(.05),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.pink.withOpacity(0.2),
-                spreadRadius: 0,
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.question_mark,
-              size: 50,
-              color: Colors.pink,
-            ),
-          ),
-        ),
-        ));
+    );
   }
+
+  //build card front
+  Widget _buildCardFront() {
+    return Container(
+      key: const ValueKey(true),
+      height: 100,
+      width: 75,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.black.withOpacity(.05),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.yellow.withOpacity(0.2),
+            spreadRadius: 0,
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Icon(
+          cardData.icon,
+          size: 50,
+          color: Colors.yellow,
+        ),
+      ),
+    );
+  }
+  //build card back
+  Widget _buildCardBack() {
+    return Container(
+      key: const ValueKey(false),
+      height: 100,
+      width: 75,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.black.withOpacity(.05),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.pink.withOpacity(0.2),
+            spreadRadius: 0,
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.question_mark,
+          size: 50,
+          color: Colors.pink,
+        ),
+      ),
+    );
+  }
+
 }
+
